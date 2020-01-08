@@ -1,0 +1,65 @@
+---
+
+title: "atla_ratings"
+author: "Jack Yang"
+date: "01/01/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+theme_set(theme_gray())
+library(jsonlite)
+```
+
+```{r}
+atla <- read_csv('atla.csv', locale = locale(encoding = "ASCII")) 
+
+atla <- 
+  atla %>% 
+    select(season, title, rating) %>% 
+    mutate(season = str_replace_all(season, "B", "")) %>% 
+    filter(season != 'Unknown Season') 
+
+atla <- atla %>% 
+  mutate(title = fct_inorder(title),
+         season = fct_recode(season,
+           "Book One: Water" = "Season 1",
+           "Book Two: Earth" = "Season 2",
+           "Book Three: Fire" = "Season 3")) %>%
+  group_by(season) %>% 
+  mutate(rank = row_number(-rating),
+         title_geom_text = rank<=3 | rank==max(rank)) %>% 
+  ungroup()
+
+atla %>% 
+  ggplot(aes(title, rating, color=season)) +
+  geom_line(aes(group = season), size = 1.5) +
+  geom_point(aes(fill = season), shape = 21, colour = "white", size = 2.5, stroke = 1.5) +
+  geom_text(data = subset(atla, title_geom_text), 
+            aes(label = title), size = 4, color = "black", check_overlap = TRUE, hjust = "inward", vjust = -0.07) +
+  geom_point(data = subset(atla, title_geom_text), 
+             aes(fill = season), shape = 21, colour = "black", size = 2.5, stroke = 1.5) +
+  scale_y_continuous(breaks = 5:10) +
+  expand_limits(y=6) +
+  facet_wrap(~ season, scales="free_x", strip.position = "bottom") +
+  scale_color_hue(direction = -1, h.start = 90) +
+  scale_fill_hue(direction = -1, h.start = 90) +
+  theme(plot.title = element_text(size = rel(2)),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.major.x  = element_blank(),
+        strip.text = element_text(size = rel(1)),
+        strip.background = element_rect(color="white", fill="white")) +
+  labs(title = 'Average IMDb ratings for every episode of "Avatar: The Last Airbender"')
+
+```
+
+
+
